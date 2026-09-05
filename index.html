@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>نظام المجموعات - ساعة رملية متطورة مع تحكم بالوقت</title>
+    <title>نظام المجموعات المتقدم - حفظ تلقائي</title>
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
@@ -194,7 +194,6 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
-        /* أزرار اختيار الوقت */
         .time-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -236,7 +235,6 @@
         .modal-controls button:hover { background: #64748b; transform: scale(1.1); }
         .transfer-modal select { padding: 10px; margin: 15px 0; width: 100%; border-radius: 60px; border: 1px solid #cbd5e1; }
         
-        /* الشريط المصغر للعداد */
         .mini-timer-bar {
             position: fixed;
             bottom: 0;
@@ -330,7 +328,7 @@
     </div>
 </div>
 
-<!-- Timer Modal - ساعة رملية مع تحكم بالوقت وتصغير -->
+<!-- Timer Modal -->
 <div id="timerModal" class="modal">
     <div class="modal-content" id="timerModalContent">
         <div class="modal-header">
@@ -376,7 +374,7 @@
     </div>
 </div>
 
-<!-- Mini Timer Bar (شريط مصغر أسفل الصفحة) -->
+<!-- Mini Timer Bar -->
 <div id="miniTimerBar" class="mini-timer-bar">
     <div class="timer-display" id="miniTimerDisplay">01:00</div>
     <div class="timer-controls">
@@ -418,14 +416,55 @@
     let wheelGroups = [];
     let canvas = null, ctx = null;
 
-    for (let i = 1; i <= 20; i++) weeks.push({ weekNumber: i, hijriText: `الأسبوع ${i} - هجري`, active: false });
-
-    function saveToLocal() { localStorage.setItem("fullSystemV14", JSON.stringify({ weeks, classesData, nextStudentId, nextGroupId })); }
-    function loadFromLocal() {
-        let saved = localStorage.getItem("fullSystemV14");
-        if(saved) { try { let p = JSON.parse(saved); weeks = p.weeks; classesData = p.classesData; nextStudentId = p.nextStudentId; nextGroupId = p.nextGroupId; } catch(e) {} }
+    // تهيئة الأسابيع
+    for (let i = 1; i <= 20; i++) {
+        weeks.push({ weekNumber: i, hijriText: `الأسبوع ${i} - هجري`, active: false });
     }
 
+    // ========== دالة الحفظ التلقائي ==========
+    function saveAllData() {
+        try {
+            const dataToSave = {
+                weeks: weeks,
+                classesData: classesData,
+                nextStudentId: nextStudentId,
+                nextGroupId: nextGroupId,
+                currentWeekView: currentWeekView,
+                timerSettings: {
+                    currentTotalSeconds: currentTotalSeconds,
+                    remainingSeconds: remainingSeconds
+                }
+            };
+            localStorage.setItem("fullSystemV15", JSON.stringify(dataToSave));
+        } catch(e) {
+            console.log("حفظ البيانات فشل:", e);
+        }
+    }
+
+    // ========== دالة التحميل ==========
+    function loadAllData() {
+        try {
+            const saved = localStorage.getItem("fullSystemV15");
+            if(saved) {
+                const p = JSON.parse(saved);
+                if(p.weeks) weeks = p.weeks;
+                if(p.classesData) classesData = p.classesData;
+                if(p.nextStudentId) nextStudentId = p.nextStudentId;
+                if(p.nextGroupId) nextGroupId = p.nextGroupId;
+                if(p.currentWeekView) currentWeekView = p.currentWeekView;
+                if(p.timerSettings) {
+                    currentTotalSeconds = p.timerSettings.currentTotalSeconds || 60;
+                    remainingSeconds = p.timerSettings.remainingSeconds || 60;
+                }
+                return true;
+            }
+        } catch(e) {
+            console.log("تحميل البيانات فشل:", e);
+        }
+        return false;
+    }
+
+    // ========== دوال مساعدة ==========
     function getActiveWeeks() { return weeks.filter(w => w.active).map(w => ({ weekNumber: w.weekNumber, hijriText: w.hijriText })); }
     function getTotalBulkScoreForGroup(group) { let total = 0; if(group.bulkScores) for(let w in group.bulkScores) total += Number(group.bulkScores[w]) || 0; return total; }
     function getGroupRankIcon(groupId, allScores) {
@@ -438,6 +477,7 @@
         return "<i class='fas fa-medal' style='color:#A9A9A9;'></i>";
     }
 
+    // ========== عرض الأسابيع ==========
     function renderWeeksTab() {
         const container = document.getElementById("weeksContainer");
         container.innerHTML = "";
@@ -447,10 +487,25 @@
             div.innerHTML = `<div class="week-check"><input type="checkbox" data-week="${week.weekNumber}" ${week.active ? 'checked' : ''}><span class="week-name">📅 الأسبوع ${week.weekNumber}</span></div><div><input type="text" class="hijri-input" data-week="${week.weekNumber}" value="${escapeHtml(week.hijriText)}"></div>`;
             container.appendChild(div);
         });
-        document.querySelectorAll('#weeksContainer input[type="checkbox"]').forEach(cb => cb.onchange = (e) => { let w = weeks.find(w=>w.weekNumber===parseInt(e.target.dataset.week)); if(w) w.active = e.target.checked; saveToLocal(); if(document.getElementById("tab-classes").classList.contains("active")) renderCurrentLevelGroups(); renderResultsTab(); });
-        document.querySelectorAll('#weeksContainer .hijri-input').forEach(inp => inp.onchange = (e) => { let w = weeks.find(w=>w.weekNumber===parseInt(e.target.dataset.week)); if(w) w.hijriText = e.target.value; saveToLocal(); });
+        document.querySelectorAll('#weeksContainer input[type="checkbox"]').forEach(cb => {
+            cb.onchange = (e) => { 
+                let w = weeks.find(w=>w.weekNumber===parseInt(e.target.dataset.week)); 
+                if(w) w.active = e.target.checked; 
+                saveAllData();
+                if(document.getElementById("tab-classes").classList.contains("active")) renderCurrentLevelGroups(); 
+                renderResultsTab(); 
+            };
+        });
+        document.querySelectorAll('#weeksContainer .hijri-input').forEach(inp => {
+            inp.onchange = (e) => { 
+                let w = weeks.find(w=>w.weekNumber===parseInt(e.target.dataset.week)); 
+                if(w) w.hijriText = e.target.value; 
+                saveAllData(); 
+            };
+        });
     }
 
+    // ========== عرض جداول المجموعات ==========
     function renderGroupTableForWeek(group, groupId, selectedWeek) {
         let weeksList = getActiveWeeks();
         let weekData = weeksList.find(w => w.weekNumber === selectedWeek);
@@ -501,25 +556,190 @@
         attachBadgeEvents();
     }
 
-    function attachWeekIconEvents() { document.querySelectorAll('.week-icon').forEach(icon => icon.onclick = () => { currentWeekView[parseInt(icon.dataset.group)] = parseInt(icon.dataset.week); renderCurrentLevelGroups(); }); }
-    function attachBadgeEvents() { document.querySelectorAll('.badge-container').forEach(cont => cont.onclick = (e) => { e.stopPropagation(); let sid = parseInt(cont.dataset.student), badge = cont.dataset.badgeType; updateStudentAndSave(sid, s => s.badge = (s.badge === badge ? null : badge)); }); }
-    function findGroupAndStudent(studentId) { for(let l in classesData) for(let g of classesData[l].groups) { let s = g.students.find(s => s.id === studentId); if(s) return { group: g, student: s, level: l }; } return null; }
-    function updateStudentAndSave(studentId, callback) { let res = findGroupAndStudent(studentId); if(res) { callback(res.student, res.group); saveToLocal(); renderCurrentLevelGroups(); renderResultsTab(); } }
-    function handleRoleChange(e) { updateStudentAndSave(parseInt(e.target.dataset.student), s => s.role = e.target.value); }
-    function handleDeleteStudent(e) { let sid = parseInt(e.target.closest('button').dataset.student); let res = findGroupAndStudent(sid); if(res) { let idx = res.group.students.findIndex(s=>s.id===sid); if(idx!==-1) res.group.students.splice(idx,1); saveToLocal(); renderCurrentLevelGroups(); renderResultsTab(); } }
-    function handleGradeChange(e) { let sid = parseInt(e.target.dataset.student), week = parseInt(e.target.dataset.week), val = e.target.value === '' ? null : Number(e.target.value); updateStudentAndSave(sid, s => { if(!s.grades) s.grades={}; s.grades[week]=val; }); }
-    function handleBulkGrade(e) { let gid = parseInt(e.target.dataset.group), week = parseInt(e.target.dataset.week), gradeVal = Number(document.getElementById(`bulk_${gid}_${week}`).value); if(isNaN(gradeVal)) gradeVal=0; for(let l in classesData) { let grp = classesData[l].groups.find(g=>g.id===gid); if(grp) { if(!grp.bulkScores) grp.bulkScores={}; grp.bulkScores[week]=gradeVal; grp.students.forEach(s => { if(!s.grades) s.grades={}; s.grades[week]=gradeVal; }); saveToLocal(); renderCurrentLevelGroups(); renderResultsTab(); break; } } }
-    function handleAddStudent(e) { let gid = parseInt(e.target.dataset.group), card = e.target.closest('.group-card'), nameInput = card.querySelector('.new-student-name'), roleSelect = card.querySelector('.new-student-role'); let sName = nameInput.value.trim(); if(!sName) { alert("أدخل الاسم"); return; } for(let l in classesData) { let grp = classesData[l].groups.find(g=>g.id===gid); if(grp) { grp.students.push({ id: nextStudentId++, name: sName, role: roleSelect.value, grades: {}, badge: null }); saveToLocal(); nameInput.value=""; renderCurrentLevelGroups(); renderResultsTab(); return; } } }
-    function handleDeleteGroup(e) { let gid = parseInt(e.target.closest('button').dataset.group); for(let l in classesData) { let idx = classesData[l].groups.findIndex(g=>g.id===gid); if(idx !== -1) { classesData[l].groups.splice(idx,1); saveToLocal(); renderCurrentLevelGroups(); renderResultsTab(); return; } } }
-    function showTransferModal(studentId) { let studentData = findGroupAndStudent(studentId); if(!studentData) return; let otherGroups = classesData[studentData.level].groups.filter(g => g.id !== studentData.group.id); if(otherGroups.length === 0) { alert("لا توجد مجموعات أخرى"); return; } pendingTransfer = { studentId, sourceGroupId: studentData.group.id, sourceLevel: studentData.level }; document.getElementById("targetGroupSelect").innerHTML = otherGroups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join(''); document.getElementById("transferModal").style.display = "flex"; }
-    function confirmTransfer() { if(!pendingTransfer.studentId) return; let targetGroupId = parseInt(document.getElementById("targetGroupSelect").value); let sourceData = findGroupAndStudent(pendingTransfer.studentId); if(sourceData) { let targetGroup = classesData[pendingTransfer.sourceLevel].groups.find(g => g.id === targetGroupId); if(targetGroup) { let studentIdx = sourceData.group.students.findIndex(s => s.id === pendingTransfer.studentId); let student = sourceData.group.students[studentIdx]; sourceData.group.students.splice(studentIdx,1); targetGroup.students.push(student); saveToLocal(); renderCurrentLevelGroups(); renderResultsTab(); alert("تم النقل"); } } closeTransferModal(); }
-    function closeTransferModal() { document.getElementById("transferModal").style.display = "none"; pendingTransfer = {}; }
-    function attachGroupEvents() { document.querySelectorAll('.student-role').forEach(s => s.onchange = handleRoleChange); document.querySelectorAll('.delete-student-btn').forEach(btn => btn.onclick = handleDeleteStudent); document.querySelectorAll('.grade-cell-input').forEach(inp => inp.onchange = handleGradeChange); document.querySelectorAll('.add-bulk-grade').forEach(btn => btn.onclick = handleBulkGrade); document.querySelectorAll('.add-student-to-group').forEach(btn => btn.onclick = handleAddStudent); document.querySelectorAll('.delete-group-btn').forEach(btn => btn.onclick = handleDeleteGroup); document.querySelectorAll('.transfer-student-btn').forEach(btn => btn.onclick = (e) => { let sid = parseInt(e.target.closest('button').dataset.student); showTransferModal(sid); }); }
-    function addNewGroupToCurrentLevel() { let name = document.getElementById("newGroupName").value.trim(); if(!name) { alert("أدخل الاسم"); return; } classesData[currentLevel].groups.push({ id: nextGroupId++, name: name, students: [], bulkScores: {} }); saveToLocal(); document.getElementById("newGroupName").value = ""; renderCurrentLevelGroups(); renderResultsTab(); }
-    function computeGroupsTotalBulkScores() { let res = []; for(let l in classesData) for(let g of classesData[l].groups) res.push({ groupDisplay: `${l} - ${g.name}`, totalScore: getTotalBulkScoreForGroup(g) }); return res; }
-    function renderResultsTab() { let container = document.getElementById("resultsContainer"); let res = computeGroupsTotalBulkScores(); if(!res.length) { container.innerHTML = "<div class='note'>لا توجد مجموعات بعد.</div>"; return; } container.innerHTML = res.map(r => `<div class="result-card"><div><strong>📌 ${escapeHtml(r.groupDisplay)}</strong></div><div>🏆 مجموع الإضافات: ${r.totalScore}</div></div>`).join(''); }
+    function attachWeekIconEvents() { 
+        document.querySelectorAll('.week-icon').forEach(icon => {
+            icon.onclick = () => { 
+                currentWeekView[parseInt(icon.dataset.group)] = parseInt(icon.dataset.week); 
+                saveAllData();
+                renderCurrentLevelGroups(); 
+            };
+        });
+    }
+    
+    function attachBadgeEvents() { 
+        document.querySelectorAll('.badge-container').forEach(cont => {
+            cont.onclick = (e) => { 
+                e.stopPropagation(); 
+                let sid = parseInt(cont.dataset.student); 
+                let badge = cont.dataset.badgeType; 
+                updateStudentAndSave(sid, s => s.badge = (s.badge === badge ? null : badge)); 
+            };
+        });
+    }
+    
+    function findGroupAndStudent(studentId) { 
+        for(let l in classesData) for(let g of classesData[l].groups) { 
+            let s = g.students.find(s => s.id === studentId); 
+            if(s) return { group: g, student: s, level: l }; 
+        } 
+        return null; 
+    }
+    
+    function updateStudentAndSave(studentId, callback) { 
+        let res = findGroupAndStudent(studentId); 
+        if(res) { 
+            callback(res.student, res.group); 
+            saveAllData(); 
+            renderCurrentLevelGroups(); 
+            renderResultsTab(); 
+        } 
+    }
 
-    // رسم الدائرة
+    function handleRoleChange(e) { 
+        updateStudentAndSave(parseInt(e.target.dataset.student), s => s.role = e.target.value); 
+    }
+    
+    function handleDeleteStudent(e) { 
+        let sid = parseInt(e.target.closest('button').dataset.student); 
+        let res = findGroupAndStudent(sid); 
+        if(res) { 
+            let idx = res.group.students.findIndex(s=>s.id===sid); 
+            if(idx!==-1) res.group.students.splice(idx,1); 
+            saveAllData(); 
+            renderCurrentLevelGroups(); 
+            renderResultsTab(); 
+        } 
+    }
+    
+    function handleGradeChange(e) { 
+        let sid = parseInt(e.target.dataset.student); 
+        let week = parseInt(e.target.dataset.week); 
+        let val = e.target.value === '' ? null : Number(e.target.value); 
+        updateStudentAndSave(sid, s => { if(!s.grades) s.grades={}; s.grades[week]=val; }); 
+    }
+    
+    function handleBulkGrade(e) { 
+        let gid = parseInt(e.target.dataset.group); 
+        let week = parseInt(e.target.dataset.week); 
+        let gradeVal = Number(document.getElementById(`bulk_${gid}_${week}`).value); 
+        if(isNaN(gradeVal)) gradeVal=0; 
+        for(let l in classesData) { 
+            let grp = classesData[l].groups.find(g=>g.id===gid); 
+            if(grp) { 
+                if(!grp.bulkScores) grp.bulkScores={}; 
+                grp.bulkScores[week]=gradeVal; 
+                grp.students.forEach(s => { if(!s.grades) s.grades={}; s.grades[week]=gradeVal; }); 
+                saveAllData(); 
+                renderCurrentLevelGroups(); 
+                renderResultsTab(); 
+                break; 
+            } 
+        } 
+    }
+    
+    function handleAddStudent(e) { 
+        let gid = parseInt(e.target.dataset.group); 
+        let card = e.target.closest('.group-card'); 
+        let nameInput = card.querySelector('.new-student-name'); 
+        let roleSelect = card.querySelector('.new-student-role'); 
+        let sName = nameInput.value.trim(); 
+        if(!sName) { alert("أدخل الاسم"); return; } 
+        for(let l in classesData) { 
+            let grp = classesData[l].groups.find(g=>g.id===gid); 
+            if(grp) { 
+                grp.students.push({ id: nextStudentId++, name: sName, role: roleSelect.value, grades: {}, badge: null }); 
+                saveAllData(); 
+                nameInput.value=""; 
+                renderCurrentLevelGroups(); 
+                renderResultsTab(); 
+                return; 
+            } 
+        } 
+    }
+    
+    function handleDeleteGroup(e) { 
+        let gid = parseInt(e.target.closest('button').dataset.group); 
+        for(let l in classesData) { 
+            let idx = classesData[l].groups.findIndex(g=>g.id===gid); 
+            if(idx !== -1) { 
+                classesData[l].groups.splice(idx,1); 
+                saveAllData(); 
+                renderCurrentLevelGroups(); 
+                renderResultsTab(); 
+                return; 
+            } 
+        } 
+    }
+    
+    function showTransferModal(studentId) { 
+        let studentData = findGroupAndStudent(studentId); 
+        if(!studentData) return; 
+        let otherGroups = classesData[studentData.level].groups.filter(g => g.id !== studentData.group.id); 
+        if(otherGroups.length === 0) { alert("لا توجد مجموعات أخرى"); return; } 
+        pendingTransfer = { studentId, sourceGroupId: studentData.group.id, sourceLevel: studentData.level }; 
+        document.getElementById("targetGroupSelect").innerHTML = otherGroups.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join(''); 
+        document.getElementById("transferModal").style.display = "flex"; 
+    }
+    
+    function confirmTransfer() { 
+        if(!pendingTransfer.studentId) return; 
+        let targetGroupId = parseInt(document.getElementById("targetGroupSelect").value); 
+        let sourceData = findGroupAndStudent(pendingTransfer.studentId); 
+        if(sourceData) { 
+            let targetGroup = classesData[pendingTransfer.sourceLevel].groups.find(g => g.id === targetGroupId); 
+            if(targetGroup) { 
+                let studentIdx = sourceData.group.students.findIndex(s => s.id === pendingTransfer.studentId); 
+                let student = sourceData.group.students[studentIdx]; 
+                sourceData.group.students.splice(studentIdx,1); 
+                targetGroup.students.push(student); 
+                saveAllData(); 
+                renderCurrentLevelGroups(); 
+                renderResultsTab(); 
+                alert("تم النقل"); 
+            } 
+        } 
+        closeTransferModal(); 
+    }
+    
+    function closeTransferModal() { 
+        document.getElementById("transferModal").style.display = "none"; 
+        pendingTransfer = {}; 
+    }
+    
+    function attachGroupEvents() { 
+        document.querySelectorAll('.student-role').forEach(s => s.onchange = handleRoleChange); 
+        document.querySelectorAll('.delete-student-btn').forEach(btn => btn.onclick = handleDeleteStudent); 
+        document.querySelectorAll('.grade-cell-input').forEach(inp => inp.onchange = handleGradeChange); 
+        document.querySelectorAll('.add-bulk-grade').forEach(btn => btn.onclick = handleBulkGrade); 
+        document.querySelectorAll('.add-student-to-group').forEach(btn => btn.onclick = handleAddStudent); 
+        document.querySelectorAll('.delete-group-btn').forEach(btn => btn.onclick = handleDeleteGroup); 
+        document.querySelectorAll('.transfer-student-btn').forEach(btn => btn.onclick = (e) => { let sid = parseInt(e.target.closest('button').dataset.student); showTransferModal(sid); }); 
+    }
+    
+    function addNewGroupToCurrentLevel() { 
+        let name = document.getElementById("newGroupName").value.trim(); 
+        if(!name) { alert("أدخل الاسم"); return; } 
+        classesData[currentLevel].groups.push({ id: nextGroupId++, name: name, students: [], bulkScores: {} }); 
+        saveAllData(); 
+        document.getElementById("newGroupName").value = ""; 
+        renderCurrentLevelGroups(); 
+        renderResultsTab(); 
+    }
+    
+    function computeGroupsTotalBulkScores() { 
+        let res = []; 
+        for(let l in classesData) for(let g of classesData[l].groups) res.push({ groupDisplay: `${l} - ${g.name}`, totalScore: getTotalBulkScoreForGroup(g) }); 
+        return res; 
+    }
+    
+    function renderResultsTab() { 
+        let container = document.getElementById("resultsContainer"); 
+        let res = computeGroupsTotalBulkScores(); 
+        if(!res.length) { container.innerHTML = "<div class='note'>لا توجد مجموعات بعد.</div>"; return; } 
+        container.innerHTML = res.map(r => `<div class="result-card"><div><strong>📌 ${escapeHtml(r.groupDisplay)}</strong></div><div>🏆 مجموع الإضافات: ${r.totalScore}</div></div>`).join(''); 
+    }
+
+    // ========== الدائرة العشوائية ==========
     function drawWheel(groups) {
         if(!canvas) canvas = document.getElementById("wheelCanvas");
         if(!canvas || groups.length === 0) return;
@@ -614,8 +834,8 @@
         document.getElementById("spinWheelBtn").onclick = () => startWheelSpin();
         document.getElementById("resetWheelBtn").onclick = () => resetWheel();
     }
-    
-    // ========== الساعة الرملية المتطورة ==========
+
+    // ========== الساعة الرملية ==========
     function formatTime(seconds) {
         let mins = Math.floor(seconds / 60);
         let secs = seconds % 60;
@@ -676,6 +896,7 @@
                 let display = formatTime(remainingSeconds);
                 document.getElementById("timerCountdown").innerText = display;
                 document.getElementById("miniTimerDisplay").innerText = display;
+                saveAllData();
             }
             if(remainingSeconds <= 0) {
                 clearInterval(sandAnimationInterval);
@@ -687,6 +908,7 @@
                 if(sandStream) sandStream.setAttribute("opacity", "0");
                 document.getElementById("timerCountdown").innerText = "انتهى! ⏰";
                 document.getElementById("miniTimerDisplay").innerText = "انتهى! ⏰";
+                saveAllData();
                 setTimeout(() => {
                     if(!isTimerRunning) {
                         document.getElementById("timerCountdown").innerText = formatTime(currentTotalSeconds);
@@ -707,6 +929,7 @@
         resetSandDisplay();
         document.getElementById("startTimerBtn").innerHTML = '<i class="fas fa-play"></i> بدء المؤقت';
         document.getElementById("startTimerBtn").style.background = "#22c55e";
+        saveAllData();
     }
     
     function setTimerDuration(seconds) {
@@ -722,18 +945,17 @@
         currentTotalSeconds = seconds;
         remainingSeconds = seconds;
         resetSandDisplay();
-        // تحديث الأزرار النشطة
         document.querySelectorAll('.time-btn').forEach(btn => {
             btn.classList.remove('active-time');
             if(parseInt(btn.dataset.time) === seconds) btn.classList.add('active-time');
         });
+        saveAllData();
     }
     
     function showTimer() {
         document.getElementById("timerModal").style.display = "flex";
         isMinimized = false;
         document.getElementById("miniTimerBar").style.display = "none";
-        // إعادة ضبط الحالة
         if(!isTimerRunning) {
             resetSandDisplay();
         }
@@ -760,29 +982,66 @@
         isTimerRunning = false;
         document.getElementById("timerModal").style.display = "none";
         document.getElementById("miniTimerBar").style.display = "none";
+        saveAllData();
     }
 
-    // ========== أحداث ==========
-    function setupTabs() { document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => { document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); btn.classList.add('active'); document.getElementById(btn.dataset.tab).classList.add('active'); if(btn.dataset.tab === 'tab-weeks') renderWeeksTab(); else if(btn.dataset.tab === 'tab-classes') renderCurrentLevelGroups(); else renderResultsTab(); }); }
-    function setupClassLevels() { document.querySelectorAll('.class-level-btn').forEach(btn => btn.onclick = () => { document.querySelectorAll('.class-level-btn').forEach(b=>b.classList.remove('active-level')); btn.classList.add('active-level'); currentLevel = btn.dataset.level; renderCurrentLevelGroups(); }); }
+    // ========== إعدادات التبويبات ==========
+    function setupTabs() { 
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => { 
+                document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); 
+                document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active')); 
+                btn.classList.add('active'); 
+                document.getElementById(btn.dataset.tab).classList.add('active'); 
+                if(btn.dataset.tab === 'tab-weeks') renderWeeksTab(); 
+                else if(btn.dataset.tab === 'tab-classes') renderCurrentLevelGroups(); 
+                else renderResultsTab(); 
+            };
+        });
+    }
+    
+    function setupClassLevels() { 
+        document.querySelectorAll('.class-level-btn').forEach(btn => {
+            btn.onclick = () => { 
+                document.querySelectorAll('.class-level-btn').forEach(b=>b.classList.remove('active-level')); 
+                btn.classList.add('active-level'); 
+                currentLevel = btn.dataset.level; 
+                renderCurrentLevelGroups(); 
+            };
+        });
+    }
 
+    // ========== تحميل الصفحة ==========
     document.addEventListener("DOMContentLoaded", () => {
-        loadFromLocal();
+        // تحميل البيانات المحفوظة
+        const dataLoaded = loadAllData();
+        
         renderWeeksTab();
         setupTabs();
         setupClassLevels();
+        
         document.getElementById("addGroupBtn").onclick = () => addNewGroupToCurrentLevel();
         document.getElementById("randomPickerBtn").onclick = () => showRandomWheel();
         document.getElementById("confirmTransferBtn").onclick = () => confirmTransfer();
         document.getElementById("closeTransferBtn").onclick = () => closeTransferModal();
-        document.getElementById("closeModalBtn").onclick = () => { if(spinInterval) clearInterval(spinInterval); if(spinTimeout) clearTimeout(spinTimeout); document.getElementById("randomModal").style.display = "none"; };
+        document.getElementById("closeModalBtn").onclick = () => { 
+            if(spinInterval) clearInterval(spinInterval); 
+            if(spinTimeout) clearTimeout(spinTimeout); 
+            document.getElementById("randomModal").style.display = "none"; 
+        };
         
         // أحداث الساعة الرملية
         document.getElementById("timerBtn").onclick = () => showTimer();
         document.getElementById("closeTimerModalBtn").onclick = () => closeTimer();
         document.getElementById("minimizeTimerBtn").onclick = () => minimizeTimer();
         document.getElementById("expandTimerBtn").onclick = () => expandTimer();
-        document.getElementById("stopMiniTimerBtn").onclick = () => { if(sandAnimationInterval) clearInterval(sandAnimationInterval); sandAnimationInterval = null; isTimerRunning = false; document.getElementById("miniTimerBar").style.display = "none"; };
+        document.getElementById("stopMiniTimerBtn").onclick = () => { 
+            if(sandAnimationInterval) clearInterval(sandAnimationInterval); 
+            sandAnimationInterval = null; 
+            isTimerRunning = false; 
+            document.getElementById("miniTimerBar").style.display = "none"; 
+            saveAllData();
+        };
         document.getElementById("startTimerBtn").onclick = () => startTimer();
         document.getElementById("resetTimerBtn").onclick = () => resetTimer();
         
@@ -794,13 +1053,36 @@
             };
         });
         
-        // تعيين القيمة الافتراضية
-        setTimerDuration(60);
+        // تعيين القيمة الافتراضية إذا لم تكن محملة
+        if(!dataLoaded) {
+            setTimerDuration(60);
+        } else {
+            // استعادة حالة المؤقت
+            resetSandDisplay();
+            // استعادة اختيار الوقت النشط
+            document.querySelectorAll('.time-btn').forEach(btn => {
+                btn.classList.remove('active-time');
+                if(parseInt(btn.dataset.time) === currentTotalSeconds) btn.classList.add('active-time');
+            });
+        }
         
         renderCurrentLevelGroups();
         renderResultsTab();
+        
+        // حفظ البيانات بشكل دوري (كل 5 ثوانٍ) كضمان إضافي
+        setInterval(() => {
+            saveAllData();
+        }, 5000);
     });
-    function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    
+    function escapeHtml(str) { 
+        return String(str).replace(/[&<>]/g, function(m){ 
+            if(m==='&') return '&amp;'; 
+            if(m==='<') return '&lt;'; 
+            if(m==='>') return '&gt;'; 
+            return m;
+        }); 
+    }
 </script>
 </body>
 </html>
