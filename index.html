@@ -983,42 +983,74 @@
 
     // ====== نظام التنبيه للساعة الرملية - حسب طلبك ======
     let audioCtx = null;
-    function initAudio(){
-        if(!audioCtx){
-            try{ audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){}
+    function initAudio() {
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!audioCtx && AudioContextClass) audioCtx = new AudioContextClass();
+            if (audioCtx && (audioCtx.state === "suspended" || audioCtx.state === "interrupted")) {
+                // يجب طلب الاستئناف من نقرة المستخدم، خصوصاً في Safari على iPhone.
+                const resume = audioCtx.resume();
+                if (resume && typeof resume.catch === "function") resume.catch(() => {});
+            }
+        } catch (e) {
+            console.warn("تعذر تهيئة صوت المؤقت:", e);
         }
-        if(audioCtx && audioCtx.state === 'suspended'){ audioCtx.resume(); }
+        return audioCtx;
     }
-    // تفعيل الصوت عند أول تفاعل
-    document.addEventListener('click', initAudio, {once:true});
-    document.addEventListener('touchstart', initAudio, {once:true});
+    function primeTimerAudio() {
+        const ctx = initAudio();
+        if (!ctx) return;
+        try {
+            // فتح قناة الصوت بصمت أثناء نقرة «بدء المؤقت» حتى يسمح Safari بأصوات التنبيه اللاحقة.
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.00001, ctx.currentTime);
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.015);
+        } catch (e) {
+            console.warn("تعذر تجهيز صوت التنبيه:", e);
+        }
+    }
+    document.addEventListener("click", initAudio, { once: true });
+    document.addEventListener("touchstart", initAudio, { once: true, passive: true });
 
-    function playBeep(isFinal=false, remaining=0){
-        initAudio();
-        if(!audioCtx) return;
-        try{
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = isFinal ? 'square' : 'sine';
-            if(isFinal || remaining <= 5){
-                osc.frequency.value = 1200;
-                gain.gain.setValueAtTime(0.6, audioCtx.currentTime);
-            } else if(remaining <= 10){
-                osc.frequency.value = 1000;
-                gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-            } else {
-                osc.frequency.value = 800;
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    function playBeep(isFinal = false, remaining = 0) {
+        const ctx = initAudio();
+        if (!ctx) return;
+        const ring = () => {
+            if (!audioCtx || audioCtx.state !== "running") return;
+            try {
+                const now = audioCtx.currentTime;
+                const tones = isFinal ? [880, 1175, 1568] : [880, 1320];
+                tones.forEach((frequency, index) => {
+                    const oscillator = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    const startAt = now + index * (isFinal ? 0.13 : 0.035);
+                    const duration = isFinal ? 0.38 : 0.32;
+                    oscillator.type = "sine";
+                    oscillator.frequency.setValueAtTime(frequency, startAt);
+                    gain.gain.setValueAtTime(0.0001, startAt);
+                    gain.gain.exponentialRampToValueAtTime(isFinal ? 0.42 : 0.28, startAt + 0.025);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+                    oscillator.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    oscillator.start(startAt);
+                    oscillator.stop(startAt + duration + 0.02);
+                });
+                if (navigator.vibrate && (isFinal || remaining <= 10)) {
+                    navigator.vibrate(isFinal ? [180, 80, 180, 80, 280] : 70);
+                }
+            } catch (e) {
+                console.warn("تعذر تشغيل جرس المؤقت:", e);
             }
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
-            osc.stop(audioCtx.currentTime + 0.25);
-            if(navigator.vibrate && (isFinal || remaining <= 10)){
-                navigator.vibrate(isFinal ? [200,100,200] : 100);
-            }
-        }catch(e){ console.log('beep failed', e); }
+        };
+        if (ctx.state === "running") ring();
+        else {
+            const resume = ctx.resume();
+            if (resume && typeof resume.then === "function") resume.then(ring).catch(e => console.warn("تعذر استئناف صوت المؤقت:", e));
+        }
     }
     function shouldBeep(total, remaining){
         // يبدأ تنبيه النهاية عند بقاء 10 ثوانٍ لجميع مدد المؤقت.
@@ -1026,6 +1058,8 @@
     }
 
     function startTimer() {
+        // فك حظر الصوت من نقرة بدء المؤقت قبل أن يبدأ العد التنازلي.
+        primeTimerAudio();
         if(isTimerRunning) return;
         if(remainingSeconds <= 0) {
             remainingSeconds = currentTotalSeconds;
