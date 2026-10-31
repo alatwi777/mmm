@@ -272,6 +272,34 @@
             font-size: 0.85rem;
         }
         .mini-timer-bar .timer-controls button:hover { background: #ea580c; }
+        .tabs-nav { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+        .theme-tools { margin-inline-start:auto; display:flex; gap:8px; }
+        .theme-tools button { border:1px solid #cbd5e1; border-radius:30px; padding:9px 15px; cursor:pointer; font-weight:700; background:#fff; color:#17324d; }
+        .theme-tools button.active-theme { background:#0f766e; color:#fff; border-color:#0f766e; }
+        .backup-panel { background:#fff; border:1px solid #dbe4ee; border-radius:18px; padding:22px; margin-top:18px; box-shadow:0 8px 22px rgba(15,23,42,.06); }
+        .backup-actions { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0 22px; }
+        .backup-actions button { border:0; border-radius:12px; padding:12px 20px; font-weight:700; cursor:pointer; color:#fff; background:#0f766e; }
+        .backup-actions button.restore-button { background:#475569; }
+        .backup-table { width:100%; border-collapse:collapse; margin-top:12px; }
+        .backup-table th,.backup-table td { padding:12px; border-bottom:1px solid #e2e8f0; text-align:right; }
+        .group-title-main { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .edit-group-name-btn { border:1px solid rgba(255,255,255,.5); color:#fff; background:rgba(255,255,255,.14); border-radius:24px; padding:7px 12px; cursor:pointer; font-weight:700; }
+        body[data-theme="dark"] { background:#071426; color:#e7eefb; }
+        body[data-theme="dark"] .app-container, body[data-theme="dark"] .tabs-nav, body[data-theme="dark"] .tab-content { background:#0b1d34; color:#e7eefb; }
+        body[data-theme="dark"] .tab-content h3, body[data-theme="dark"] .tab-content h2 { color:#e7eefb; }
+        body[data-theme="dark"] .group-card, body[data-theme="dark"] .result-card, body[data-theme="dark"] .backup-panel { background:#102742; color:#e7eefb; border-color:#245071; }
+        body[data-theme="dark"] table, body[data-theme="dark"] th, body[data-theme="dark"] td { color:#e7eefb; border-color:#294563; }
+        body[data-theme="dark"] input, body[data-theme="dark"] select { background:#0b1d34; color:#f8fafc; border-color:#3d5b78 !important; }
+        body[data-theme="dark"] .add-group-area { background:#102742 !important; }
+        body[data-theme="dark"] .week-item { background:#102742; color:#e7eefb; }
+        body[data-theme="beige"] { background:#eee6d5; color:#3e3022; }
+        body[data-theme="beige"] .app-container, body[data-theme="beige"] .tabs-nav, body[data-theme="beige"] .tab-content { background:#f7f0e3; color:#3e3022; }
+        body[data-theme="beige"] .group-card, body[data-theme="beige"] .result-card, body[data-theme="beige"] .backup-panel { background:#fffaf0; color:#3e3022; border-color:#ddc9a5; }
+        body[data-theme="beige"] .group-title { background:linear-gradient(120deg,#7b4b2a,#a66b3f); }
+        body[data-theme="beige"] table, body[data-theme="beige"] th, body[data-theme="beige"] td { color:#4b3828; border-color:#e6d4b3; }
+        body[data-theme="beige"] .add-group-area { background:#eee1c9 !important; }
+        body[data-theme="beige"] input, body[data-theme="beige"] select { background:#fffdf7; color:#3e3022; border-color:#d8c19a !important; }
+        @media(max-width:650px) { .theme-tools { margin-inline-start:0; width:100%; justify-content:flex-start; } .backup-table { font-size:.88rem; } .backup-table th,.backup-table td { padding:8px 5px; } }
     </style>
 </head>
 <body>
@@ -280,6 +308,11 @@
         <button class="tab-btn active" data-tab="tab-weeks"><i class="fas fa-calendar-week"></i> الأسابيع</button>
         <button class="tab-btn" data-tab="tab-classes"><i class="fas fa-chalkboard-user"></i> الفصول</button>
         <button class="tab-btn" data-tab="tab-results"><i class="fas fa-trophy"></i> النتائج</button>
+        <button class="tab-btn" data-tab="tab-backup"><i class="fas fa-database"></i> النسخ والاستعادة</button>
+        <div class="theme-tools" aria-label="تغيير المظهر">
+            <button type="button" class="theme-choice" data-theme-choice="dark">🌙 داكن</button>
+            <button type="button" class="theme-choice" data-theme-choice="beige">🎨 بيج</button>
+        </div>
     </div>
 
     <div id="tab-weeks" class="tab-content active">
@@ -307,6 +340,19 @@
     <div id="tab-results" class="tab-content">
         <h3><i class="fas fa-chart-simple"></i> النتائج (مجموع الدرجات المضافة لكل مجموعة)</h3>
         <div id="resultsContainer" class="results-grid"></div>
+    </div>
+    <div id="tab-backup" class="tab-content">
+        <h3><i class="fas fa-database"></i> تنزيل نسخة واستعادتها</h3>
+        <p>احفظ نسخة من بيانات الفصول والطلاب والدرجات على جهازك، أو استعد نسخة سبق تنزيلها.</p>
+        <div class="backup-panel">
+            <div class="backup-actions">
+                <button type="button" id="downloadBackupBtn"><i class="fas fa-download"></i> تنزيل نسخة</button>
+                <button type="button" id="restoreBackupBtn" class="restore-button"><i class="fas fa-upload"></i> استعادة نسخة</button>
+                <input type="file" id="restoreBackupFile" accept=".json,application/json" hidden>
+            </div>
+            <h4>سجل النسخ التي تم تنزيلها</h4>
+            <div id="backupHistoryContainer"></div>
+        </div>
     </div>
 </div>
 
@@ -520,7 +566,7 @@
                 <div class="badge-container" data-badge-type="غير متعاون" data-student="${s.id}"><i class="fas fa-times-circle badge-icon" style="color:#ef4444;"></i><div class="badge-checkbox ${s.badge === 'غير متعاون' ? 'selected' : ''}">${s.badge === 'غير متعاون' ? '<i class="fas fa-check"></i>' : ''}</div></div>
             </div>`;
             tbody += `<tr data-student-id="${s.id}"><td>${escapeHtml(s.name)}</td>
-                        <td><select class="student-role" data-student="${s.id}">${['رئيس','نائب رئيس','منسق','كاتب','مساعد كاتب','متحدث','مساعد متحدث','عضو'].map(opt => `<option ${s.role===opt ? 'selected':''}>${opt}</option>`).join('')}</select></td>
+                        <td><select class="student-role" data-student="${s.id}">${['قائد','نائب قائد','كاتب','مساعد كاتب','مسؤول المواد','متحدث','ضابط الوقت'].map(opt => `<option ${s.role===opt ? 'selected':''}>${opt}</option>`).join('')}</select></td>
                         <td>${badgesHtml}</td>
                         <td><input type="number" class="grade-cell-input" data-student="${s.id}" data-week="${selectedWeek}" value="${gradeVal}" min="0" max="25" style="width:90px;"></td>
                         <td><button class="transfer-student-btn" data-student="${s.id}"><i class="fas fa-exchange-alt"></i> نقل</button></td>
@@ -551,7 +597,7 @@
             let selectedWeek = currentWeekView[g.id];
             let totalBulkScore = getTotalBulkScoreForGroup(g);
             let rankIcon = getGroupRankIcon(g.id, allScores);
-            groupsHtml += `<div class="group-card"><div class="group-title"><div><i class="fas fa-layer-group"></i> ${rankIcon} ${escapeHtml(g.name)}</div><div class="group-stats"><span>📊 مجموع الإضافات: ${totalBulkScore} درجة</span><button class="delete-group-btn" data-group="${g.id}"><i class="fas fa-trash-alt"></i> حذف</button></div></div><div style="padding:16px; overflow-x:auto;">${renderGroupTableForWeek(g, g.id, selectedWeek)}</div><div class="week-icons-container">${activeWeeks.map(week => `<div class="week-icon ${selectedWeek === week.weekNumber ? 'active-week' : ''}" data-group="${g.id}" data-week="${week.weekNumber}">${week.weekNumber}</div>`).join('')}</div><div class="add-student-bar"><input type="text" class="new-student-name" data-group="${g.id}" placeholder="اسم الطالب"><select class="new-student-role" data-group="${g.id}"><option>رئيس</option><option>نائب رئيس</option><option>منسق</option><option>كاتب</option><option>مساعد كاتب</option><option>متحدث</option><option>مساعد متحدث</option><option>عضو</option></select><button class="add-student-to-group" data-group="${g.id}">➕ إضافة طالب</button></div></div>`;
+            groupsHtml += `<div class="group-card"><div class="group-title"><div class="group-title-main"><span><i class="fas fa-layer-group"></i> ${rankIcon} ${escapeHtml(g.name)}</span><button class="edit-group-name-btn" type="button" data-group="${g.id}" title="تعديل اسم المجموعة"><i class="fas fa-pen"></i> تعديل الاسم</button></div><div class="group-stats"><span>📊 مجموع الإضافات: ${totalBulkScore} درجة</span><button class="delete-group-btn" data-group="${g.id}"><i class="fas fa-trash-alt"></i> حذف</button></div></div><div style="padding:16px; overflow-x:auto;">${renderGroupTableForWeek(g, g.id, selectedWeek)}</div><div class="week-icons-container">${activeWeeks.map(week => `<div class="week-icon ${selectedWeek === week.weekNumber ? 'active-week' : ''}" data-group="${g.id}" data-week="${week.weekNumber}">${week.weekNumber}</div>`).join('')}</div><div class="add-student-bar"><input type="text" class="new-student-name" data-group="${g.id}" placeholder="اسم الطالب"><select class="new-student-role" data-group="${g.id}"><option>قائد</option><option>نائب قائد</option><option>كاتب</option><option>مساعد كاتب</option><option>مسؤول المواد</option><option>متحدث</option><option>ضابط الوقت</option></select><button class="add-student-to-group" data-group="${g.id}">➕ إضافة طالب</button></div></div>`;
         });
         groupsHtml += `</div>`;
         container.innerHTML = groupsHtml;
@@ -752,10 +798,25 @@
         document.querySelectorAll('.add-bulk-grade').forEach(btn => btn.onclick = handleBulkGrade); 
         document.querySelectorAll('.bulk-adjust-btn').forEach(btn => btn.onclick = handleBulkAdjust); 
         document.querySelectorAll('.add-student-to-group').forEach(btn => btn.onclick = handleAddStudent); 
-        document.querySelectorAll('.delete-group-btn').forEach(btn => btn.onclick = handleDeleteGroup); 
+        document.querySelectorAll('.delete-group-btn').forEach(btn => btn.onclick = handleDeleteGroup);
+        document.querySelectorAll('.edit-group-name-btn').forEach(btn => btn.onclick = handleRenameGroup); 
         document.querySelectorAll('.transfer-student-btn').forEach(btn => btn.onclick = (e) => { let sid = parseInt(e.target.closest('button').dataset.student); showTransferModal(sid); }); 
     }
     
+    function handleRenameGroup(e) {
+        const id = parseInt(e.currentTarget.dataset.group, 10);
+        const group = (classesData[currentLevel]?.groups || []).find(g => g.id === id);
+        if(!group) return;
+        const nextName = prompt("اكتب اسم المجموعة الجديد:", group.name);
+        if(nextName === null) return;
+        const trimmed = nextName.trim();
+        if(!trimmed) { alert("اسم المجموعة لا يمكن أن يكون فارغاً."); return; }
+        group.name = trimmed;
+        saveAllData();
+        renderCurrentLevelGroups();
+        renderResultsTab();
+    }
+
     function addNewGroupToCurrentLevel() { 
         let name = document.getElementById("newGroupName").value.trim(); 
         if(!name) { alert("أدخل الاسم"); return; } 
@@ -958,12 +1019,8 @@
         }catch(e){ console.log('beep failed', e); }
     }
     function shouldBeep(total, remaining){
-        if(remaining <= 0) return false;
-        if(total === 30) return true; // 30 ثانية = كل ثانية
-        if(total === 60) return remaining <= 30; // 60 ثانية = بعد النصف
-        if(total === 180) return remaining <= 60; // 3 دقائق = آخر دقيقة
-        if(total === 300) return remaining <= 120; // 5 دقائق = آخر دقيقتين
-        return remaining <= Math.ceil(total * 0.25);
+        // يبدأ تنبيه النهاية عند بقاء 10 ثوانٍ لجميع مدد المؤقت.
+        return remaining > 0 && remaining <= 10;
     }
 
     function startTimer() {
@@ -1079,6 +1136,77 @@
         saveAllData();
     }
 
+    // ========== النسخ الاحتياطي والاستعادة ==========
+    function setupBackupControls() {
+        document.getElementById("downloadBackupBtn").onclick = downloadBackup;
+        document.getElementById("restoreBackupBtn").onclick = () => document.getElementById("restoreBackupFile").click();
+        document.getElementById("restoreBackupFile").onchange = restoreBackupFromFile;
+        renderBackupHistory();
+    }
+    function getBackupHistory() {
+        try { return JSON.parse(localStorage.getItem("mmmBackupHistory") || "[]"); } catch(e) { return []; }
+    }
+    function renderBackupHistory() {
+        const container = document.getElementById("backupHistoryContainer");
+        if(!container) return;
+        const entries = getBackupHistory();
+        if(!entries.length) { container.innerHTML = "<p>لا توجد نسخ مسجلة بعد. عند التنزيل سيظهر اسم الملف وتاريخه هنا.</p>"; return; }
+        container.innerHTML = `<div style="overflow-x:auto"><table class="backup-table"><thead><tr><th>اسم الملف</th><th>التاريخ</th><th>الوقت</th></tr></thead><tbody>${entries.map(x => `<tr><td>${escapeHtml(x.filename)}</td><td>${escapeHtml(x.date)}</td><td>${escapeHtml(x.time)}</td></tr>`).join("")}</tbody></table></div>`;
+    }
+    function downloadBackup() {
+        saveAllData();
+        const now = new Date();
+        const pad = n => String(n).padStart(2, "0");
+        const date = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+        const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        const filename = `mmm-backup-${date}_${time.replace(/:/g,"-")}.json`;
+        const payload = { app: "mmm", version: 1, createdAt: now.toISOString(), data: JSON.parse(localStorage.getItem("fullSystemV15") || "{}") };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+        const history = getBackupHistory();
+        history.unshift({filename, date, time});
+        localStorage.setItem("mmmBackupHistory", JSON.stringify(history.slice(0,50)));
+        renderBackupHistory();
+    }
+    function restoreBackupFromFile(e) {
+        const file = e.target.files && e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const backup = JSON.parse(reader.result);
+                const data = backup && backup.app === "mmm" ? backup.data : backup;
+                if(!data || !data.classesData || !Array.isArray(data.weeks)) throw new Error("invalid");
+                if(!confirm("سيتم استبدال البيانات الحالية بمحتويات النسخة. هل تريد المتابعة؟")) return;
+                localStorage.setItem("fullSystemV15", JSON.stringify(data));
+                alert("تمت استعادة النسخة. سيتم تحديث الصفحة الآن.");
+                location.reload();
+            } catch(err) { alert("تعذر قراءة الملف. اختر نسخة JSON تم تنزيلها من هذا التطبيق."); }
+            finally { e.target.value = ""; }
+        };
+        reader.readAsText(file);
+    }
+
+    // ========== السمات ==========
+    function setTheme(theme) {
+        document.body.dataset.theme = theme;
+        localStorage.setItem("mmmTheme", theme);
+        document.querySelectorAll(".theme-choice").forEach(btn => btn.classList.toggle("active-theme", btn.dataset.themeChoice === theme));
+    }
+    function setupThemeChoices() {
+        document.querySelectorAll(".theme-choice").forEach(btn => btn.onclick = () => setTheme(btn.dataset.themeChoice));
+        setTheme(localStorage.getItem("mmmTheme") || "beige");
+    }
+    function normalizeStudentRoles() {
+        const migration = {"رئيس":"قائد","نائب رئيس":"نائب قائد","منسق":"مسؤول المواد","مساعد متحدث":"مساعد كاتب","عضو":"متحدث"};
+        for(const level of Object.values(classesData)) for(const group of (level.groups || [])) for(const student of (group.students || [])) {
+            if(migration[student.role]) student.role = migration[student.role];
+        }
+        saveAllData();
+    }
+
     // ========== إعدادات التبويبات ==========
     function setupTabs() { 
         document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1089,7 +1217,8 @@
                 document.getElementById(btn.dataset.tab).classList.add('active'); 
                 if(btn.dataset.tab === 'tab-weeks') renderWeeksTab(); 
                 else if(btn.dataset.tab === 'tab-classes') renderCurrentLevelGroups(); 
-                else renderResultsTab(); 
+                else if(btn.dataset.tab === 'tab-results') renderResultsTab();
+                else if(btn.dataset.tab === 'tab-backup') renderBackupHistory(); 
             };
         });
     }
@@ -1113,6 +1242,9 @@
         renderWeeksTab();
         setupTabs();
         setupClassLevels();
+        setupThemeChoices();
+        setupBackupControls();
+        normalizeStudentRoles();
         
         document.getElementById("addGroupBtn").onclick = () => addNewGroupToCurrentLevel();
         document.getElementById("randomPickerBtn").onclick = () => showRandomWheel();
