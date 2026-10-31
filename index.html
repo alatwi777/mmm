@@ -401,32 +401,52 @@
             <button class="time-btn" data-time="300">5 دقائق</button>
         </div>
         <div class="hourglass-container" id="hourglassContainer">
-            <svg class="hourglass-svg" viewBox="0 0 200 280">
-                <rect x="25" y="10" width="150" height="260" rx="15" fill="#b45309" stroke="#78350f" stroke-width="3"/>
-                <path d="M35 15 L165 15 L135 85 L65 85 Z" fill="#fef3c7" stroke="#78350f" stroke-width="2.5"/>
-                <path d="M35 265 L165 265 L135 195 L65 195 Z" fill="#fef3c7" stroke="#78350f" stroke-width="2.5"/>
-                <path id="topSand" d="M38 18 L162 18 L133 82 L67 82 Z" fill="#fbbf24" clip-path="url(#topClip)"/>
-                <path id="bottomSand" d="M38 262 L162 262 L133 198 L67 198 Z" fill="#f59e0b" clip-path="url(#bottomClip)"/>
-                <rect id="sandStream" x="92" y="80" width="16" height="20" fill="#fbbf24" rx="2" opacity="0"/>
-                <rect x="85" y="130" width="30" height="20" rx="4" fill="#78350f"/>
-                <circle cx="100" cy="140" r="7" fill="#fef3c7" stroke="#78350f" stroke-width="2"/>
-                <line x1="30" y1="12" x2="170" y2="12" stroke="#78350f" stroke-width="3"/>
-                <line x1="30" y1="268" x2="170" y2="268" stroke="#78350f" stroke-width="3"/>
-                <circle cx="30" cy="140" r="4" fill="#78350f"/>
-                <circle cx="170" cy="140" r="4" fill="#78350f"/>
+            <svg class="hourglass-svg" viewBox="0 0 200 300" role="img" aria-label="ساعة رملية زجاجية">
                 <defs>
-                    <clipPath id="topClip">
-                        <rect id="topRect" x="35" y="15" width="130" height="70"/>
-                    </clipPath>
-                    <clipPath id="bottomClip">
-                        <rect id="bottomRect" x="35" y="195" width="130" height="70"/>
-                    </clipPath>
+                    <linearGradient id="woodFrame" x1="0" x2="1" y1="0" y2="1">
+                        <stop offset="0" stop-color="#f2c078"/><stop offset=".28" stop-color="#a65c22"/>
+                        <stop offset=".58" stop-color="#693714"/><stop offset=".82" stop-color="#c47a32"/><stop offset="1" stop-color="#5b2c10"/>
+                    </linearGradient>
+                    <linearGradient id="glassBody" x1="0" x2="1">
+                        <stop offset="0" stop-color="#c7efff" stop-opacity=".28"/><stop offset=".22" stop-color="#fff" stop-opacity=".72"/>
+                        <stop offset=".48" stop-color="#bde9ff" stop-opacity=".16"/><stop offset=".78" stop-color="#fff" stop-opacity=".54"/><stop offset="1" stop-color="#8ed7fa" stop-opacity=".3"/>
+                    </linearGradient>
+                    <linearGradient id="sandColor" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0" stop-color="#ffe48a"/><stop offset=".55" stop-color="#f6b83f"/><stop offset="1" stop-color="#c97718"/>
+                    </linearGradient>
+                    <linearGradient id="glassShine" x1="0" x2="1">
+                        <stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset=".45" stop-color="#fff" stop-opacity=".06"/><stop offset="1" stop-color="#fff" stop-opacity=".58"/>
+                    </linearGradient>
+                    <filter id="hgShadow" x="-30%" y="-20%" width="160%" height="150%">
+                        <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#34200e" flood-opacity=".38"/>
+                    </filter>
+                    <clipPath id="topClip"><path d="M47 38 Q47 75 72 104 L96 144 Q100 150 104 144 L128 104 Q153 75 153 38 Z"/></clipPath>
+                    <clipPath id="bottomClip"><path d="M96 158 Q100 152 104 158 L128 198 Q153 225 153 263 L47 263 Q47 225 72 198 Z"/></clipPath>
                 </defs>
+                <g filter="url(#hgShadow)">
+                    <rect x="29" y="17" width="142" height="22" rx="8" fill="url(#woodFrame)" stroke="#5d3217" stroke-width="3"/>
+                    <rect x="35" y="23" width="130" height="8" rx="4" fill="#f3cc8d" opacity=".65"/>
+                    <rect x="29" y="261" width="142" height="22" rx="8" fill="url(#woodFrame)" stroke="#5d3217" stroke-width="3"/>
+                    <rect x="35" y="267" width="130" height="8" rx="4" fill="#f3cc8d" opacity=".55"/>
+                    <path d="M47 36 Q47 74 72 104 L96 144 Q101 151 104 158 L128 198 Q153 225 153 263 L47 263 Q47 225 72 198 L96 158 Q101 151 104 144 L128 104 Q153 74 153 36 Z"
+                          fill="url(#glassBody)" stroke="#73451f" stroke-width="5" stroke-linejoin="round"/>
+                    <rect id="topRect" x="47" y="38" width="106" height="106" fill="url(#sandColor)" clip-path="url(#topClip)"/>
+                    <rect id="bottomRect" x="47" y="263" width="106" height="0" fill="url(#sandColor)" clip-path="url(#bottomClip)"/>
+                    <rect id="sandStream" class="sand-stream" x="98" y="143" width="4" height="23" rx="2" fill="url(#sandColor)" opacity="0"/>
+                    <path d="M55 45 Q57 78 81 107" fill="none" stroke="url(#glassShine)" stroke-width="5" stroke-linecap="round" opacity=".85"/>
+                    <path d="M145 45 Q143 78 119 107" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M55 255 Q57 223 81 197" fill="none" stroke="url(#glassShine)" stroke-width="5" stroke-linecap="round" opacity=".72"/>
+                    <path d="M145 255 Q143 223 119 197" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="3" stroke-linecap="round"/>
+                    <ellipse cx="100" cy="151" rx="8" ry="3" fill="#6c431f" opacity=".5"/>
+                    <circle cx="36" cy="28" r="2" fill="#fff2d2" opacity=".8"/>
+                    <circle cx="164" cy="272" r="2" fill="#fff2d2" opacity=".8"/>
+                </g>
             </svg>
         </div>
         <div id="timerCountdown" class="timer-text-elegant">01:00</div>
         <button id="startTimerBtn" style="background: #22c55e; margin-top: 15px;"><i class="fas fa-play"></i> بدء المؤقت</button>
         <button id="resetTimerBtn" style="background: #64748b; margin-top: 10px;"><i class="fas fa-undo"></i> إعادة ضبط</button>
+        <button id="testTimerSoundBtn" style="background:#0f766e; margin-top:10px;"><i class="fas fa-volume-up"></i> اختبار الجرس</button>
     </div>
 </div>
 
@@ -959,108 +979,79 @@
         const topRect = document.getElementById("topRect");
         const bottomRect = document.getElementById("bottomRect");
         const sandStream = document.getElementById("sandStream");
-        if(topRect) { topRect.setAttribute("height", "70"); topRect.setAttribute("y", "15"); }
-        if(bottomRect) { bottomRect.setAttribute("height", "0"); bottomRect.setAttribute("y", "265"); }
+        if(topRect) { topRect.setAttribute("height", "106"); topRect.setAttribute("y", "38"); }
+        if(bottomRect) { bottomRect.setAttribute("height", "0"); bottomRect.setAttribute("y", "263"); }
         if(sandStream) sandStream.setAttribute("opacity", "0");
-        document.getElementById("timerCountdown").innerText = formatTime(currentTotalSeconds);
-        document.getElementById("miniTimerDisplay").innerText = formatTime(currentTotalSeconds);
+        const countdown = document.getElementById("timerCountdown");
+        const mini = document.getElementById("miniTimerDisplay");
+        if(countdown) countdown.innerText = formatTime(currentTotalSeconds);
+        if(mini) mini.innerText = formatTime(currentTotalSeconds);
     }
-    
+
     function updateSandLevel(secondsLeft, totalSeconds) {
         const topRect = document.getElementById("topRect");
         const bottomRect = document.getElementById("bottomRect");
         const sandStream = document.getElementById("sandStream");
         if(!topRect || !bottomRect) return;
-        
-        let percent = (secondsLeft / totalSeconds) * 100;
-        let topHeight = 70 * (percent / 100);
-        let topY = 15 + (70 - topHeight);
+        const percent = Math.max(0, Math.min(100, (secondsLeft / totalSeconds) * 100));
+        const topHeight = 106 * (percent / 100);
         topRect.setAttribute("height", topHeight);
-        topRect.setAttribute("y", topY);
-        
-        let bottomHeight = 70 * ((100 - percent) / 100);
-        let bottomY = 195 + (70 - bottomHeight);
+        topRect.setAttribute("y", 38 + (106 - topHeight));
+        const bottomHeight = 106 * ((100 - percent) / 100);
         bottomRect.setAttribute("height", bottomHeight);
-        bottomRect.setAttribute("y", bottomY);
-        
-        if(secondsLeft > 0 && secondsLeft < totalSeconds) {
-            sandStream.setAttribute("opacity", "0.9");
-        } else {
-            sandStream.setAttribute("opacity", "0");
-        }
+        bottomRect.setAttribute("y", 263 - bottomHeight);
+        if(sandStream) sandStream.setAttribute("opacity", secondsLeft > 0 && secondsLeft < totalSeconds ? "1" : "0");
     }
-    
 
     // ====== نظام التنبيه للساعة الرملية - حسب طلبك ======
     let audioCtx = null;
     function initAudio() {
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (!audioCtx && AudioContextClass) audioCtx = new AudioContextClass();
-            if (audioCtx && (audioCtx.state === "suspended" || audioCtx.state === "interrupted")) {
-                // يجب طلب الاستئناف من نقرة المستخدم، خصوصاً في Safari على iPhone.
-                const resume = audioCtx.resume();
-                if (resume && typeof resume.catch === "function") resume.catch(() => {});
-            }
-        } catch (e) {
-            console.warn("تعذر تهيئة صوت المؤقت:", e);
-        }
+            if(!audioCtx && AudioContextClass) audioCtx = new AudioContextClass();
+        } catch(e) { console.warn("AudioContext unavailable", e); }
         return audioCtx;
     }
     function primeTimerAudio() {
         const ctx = initAudio();
-        if (!ctx) return;
+        if(!ctx) return Promise.resolve(false);
         try {
-            // فتح قناة الصوت بصمت أثناء نقرة «بدء المؤقت» حتى يسمح Safari بأصوات التنبيه اللاحقة.
-            const oscillator = ctx.createOscillator();
-            const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.00001, ctx.currentTime);
-            oscillator.connect(gain);
-            gain.connect(ctx.destination);
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.015);
-        } catch (e) {
-            console.warn("تعذر تجهيز صوت التنبيه:", e);
+            if(ctx.state === "running") return Promise.resolve(true);
+            // resume() is called synchronously from the user’s Start/Test button gesture.
+            return Promise.resolve(ctx.resume()).then(() => ctx.state === "running").catch(() => false);
+        } catch(e) {
+            console.warn("Could not unlock timer audio", e);
+            return Promise.resolve(false);
         }
     }
-    document.addEventListener("click", initAudio, { once: true });
-    document.addEventListener("touchstart", initAudio, { once: true, passive: true });
-
     function playBeep(isFinal = false, remaining = 0) {
         const ctx = initAudio();
-        if (!ctx) return;
+        if(!ctx) return;
         const ring = () => {
-            if (!audioCtx || audioCtx.state !== "running") return;
+            if(!audioCtx || audioCtx.state !== "running") return;
             try {
                 const now = audioCtx.currentTime;
-                const tones = isFinal ? [880, 1175, 1568] : [880, 1320];
-                tones.forEach((frequency, index) => {
-                    const oscillator = audioCtx.createOscillator();
+                const notes = isFinal ? [740, 988, 1245, 1480] : [784, 1175, 1568];
+                notes.forEach((frequency, index) => {
+                    const startAt = now + index * (isFinal ? 0.12 : 0.045);
+                    const duration = isFinal ? 0.42 : 0.46;
+                    const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
-                    const startAt = now + index * (isFinal ? 0.13 : 0.035);
-                    const duration = isFinal ? 0.38 : 0.32;
-                    oscillator.type = "sine";
-                    oscillator.frequency.setValueAtTime(frequency, startAt);
+                    osc.type = "triangle";
+                    osc.frequency.setValueAtTime(frequency, startAt);
                     gain.gain.setValueAtTime(0.0001, startAt);
-                    gain.gain.exponentialRampToValueAtTime(isFinal ? 0.42 : 0.28, startAt + 0.025);
+                    gain.gain.exponentialRampToValueAtTime(isFinal ? 0.72 : 0.55, startAt + 0.025);
                     gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-                    oscillator.connect(gain);
+                    osc.connect(gain);
                     gain.connect(audioCtx.destination);
-                    oscillator.start(startAt);
-                    oscillator.stop(startAt + duration + 0.02);
+                    osc.start(startAt);
+                    osc.stop(startAt + duration + 0.03);
                 });
-                if (navigator.vibrate && (isFinal || remaining <= 10)) {
-                    navigator.vibrate(isFinal ? [180, 80, 180, 80, 280] : 70);
-                }
-            } catch (e) {
-                console.warn("تعذر تشغيل جرس المؤقت:", e);
-            }
+                if(navigator.vibrate) navigator.vibrate(isFinal ? [180,80,180,80,280] : 90);
+            } catch(e) { console.warn("Timer bell failed", e); }
         };
-        if (ctx.state === "running") ring();
-        else {
-            const resume = ctx.resume();
-            if (resume && typeof resume.then === "function") resume.then(ring).catch(e => console.warn("تعذر استئناف صوت المؤقت:", e));
-        }
+        if(ctx.state === "running") ring();
+        else Promise.resolve(ctx.resume()).then(ring).catch(e => console.warn("Could not resume timer audio",e));
     }
     function shouldBeep(total, remaining){
         // يبدأ تنبيه النهاية عند بقاء 10 ثوانٍ لجميع مدد المؤقت.
@@ -1068,8 +1059,12 @@
     }
 
     function startTimer() {
-        // فك حظر الصوت من نقرة بدء المؤقت قبل أن يبدأ العد التنازلي.
-        primeTimerAudio();
+        if(isTimerRunning) return;
+        // اطلب فتح قناة الصوت فور ضغطة المعلم، ثم ابدأ العد بعد استجابة المتصفح.
+        primeTimerAudio().then(() => startTimerCountdown());
+    }
+
+    function startTimerCountdown() {
         if(isTimerRunning) return;
         if(remainingSeconds <= 0) {
             remainingSeconds = currentTotalSeconds;
@@ -1354,6 +1349,9 @@
         };
         document.getElementById("startTimerBtn").onclick = () => startTimer();
         document.getElementById("resetTimerBtn").onclick = () => resetTimer();
+        document.getElementById("testTimerSoundBtn").onclick = () => {
+            primeTimerAudio().then(() => playBeep(false, 10));
+        };
         
         // أزرار اختيار الوقت
         document.querySelectorAll('.time-btn').forEach(btn => {
