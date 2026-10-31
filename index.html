@@ -476,6 +476,7 @@
                 nextStudentId: nextStudentId,
                 nextGroupId: nextGroupId,
                 currentWeekView: currentWeekView,
+                currentLevel: currentLevel,
                 timerSettings: {
                     currentTotalSeconds: currentTotalSeconds,
                     remainingSeconds: remainingSeconds
@@ -498,6 +499,7 @@
                 if(p.nextStudentId) nextStudentId = p.nextStudentId;
                 if(p.nextGroupId) nextGroupId = p.nextGroupId;
                 if(p.currentWeekView) currentWeekView = p.currentWeekView;
+                if(p.currentLevel && classesData[p.currentLevel]) currentLevel = p.currentLevel;
                 if(p.timerSettings) {
                     currentTotalSeconds = p.timerSettings.currentTotalSeconds || 60;
                     remainingSeconds = p.timerSettings.remainingSeconds || 60;
@@ -1176,16 +1178,52 @@
         const reader = new FileReader();
         reader.onload = () => {
             try {
-                const backup = JSON.parse(reader.result);
-                const data = backup && backup.app === "mmm" ? backup.data : backup;
-                if(!data || !data.classesData || !Array.isArray(data.weeks)) throw new Error("invalid");
+                let backup = JSON.parse(reader.result);
+                let data = backup && backup.app === "mmm" ? backup.data : backup;
+                if(typeof data === "string") data = JSON.parse(data);
+                if(data && !data.classesData) {
+                    const nested = data.data || data.state || data.payload || data.fullSystemV15;
+                    if(typeof nested === "string") data = JSON.parse(nested);
+                    else if(nested) data = nested;
+                }
+                if(!data || !data.classesData || typeof data.classesData !== "object") {
+                    throw new Error("لم يتم العثور على بيانات الفصول في الملف.");
+                }
                 if(!confirm("سيتم استبدال البيانات الحالية بمحتويات النسخة. هل تريد المتابعة؟")) return;
-                localStorage.setItem("fullSystemV15", JSON.stringify(data));
-                alert("تمت استعادة النسخة. سيتم تحديث الصفحة الآن.");
-                location.reload();
-            } catch(err) { alert("تعذر قراءة الملف. اختر نسخة JSON تم تنزيلها من هذا التطبيق."); }
-            finally { e.target.value = ""; }
+
+                classesData = data.classesData;
+                if(Array.isArray(data.weeks) && data.weeks.length) weeks = data.weeks;
+                nextStudentId = Number(data.nextStudentId) || nextStudentId;
+                nextGroupId = Number(data.nextGroupId) || nextGroupId;
+                currentWeekView = data.currentWeekView || {};
+                if(data.currentLevel && classesData[data.currentLevel]) currentLevel = data.currentLevel;
+                else {
+                    const populatedLevel = Object.keys(classesData).find(level => (classesData[level].groups || []).length);
+                    currentLevel = populatedLevel || Object.keys(classesData)[0] || "اول 1";
+                }
+                if(data.timerSettings) {
+                    currentTotalSeconds = Number(data.timerSettings.currentTotalSeconds) || 60;
+                    remainingSeconds = Number(data.timerSettings.remainingSeconds) || currentTotalSeconds;
+                }
+                normalizeStudentRoles();
+                saveAllData();
+                setupClassLevels();
+                renderWeeksTab();
+                renderCurrentLevelGroups();
+                renderResultsTab();
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === 'tab-classes'));
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.toggle('active', tab.id === 'tab-classes'));
+                const groupCount = Object.values(classesData).reduce((sum, level) => sum + ((level && level.groups) || []).length, 0);
+                const studentCount = Object.values(classesData).reduce((sum, level) => sum + ((level && level.groups) || []).reduce((n, group) => n + ((group.students || []).length), 0), 0);
+                alert(`تمت الاستعادة بنجاح: ${groupCount} مجموعة و${studentCount} طالب. تم فتح تبويب الفصول.`);
+            } catch(err) {
+                console.error("تعذرت استعادة النسخة:", err);
+                alert(err.message || "تعذر قراءة الملف. اختر ملف JSON تم تنزيله من هذا التطبيق.");
+            } finally {
+                e.target.value = "";
+            }
         };
+        reader.onerror = () => { alert("تعذرت قراءة الملف من الجهاز."); e.target.value = ""; };
         reader.readAsText(file);
     }
 
@@ -1223,13 +1261,15 @@
         });
     }
     
-    function setupClassLevels() { 
+    function setupClassLevels() {
         document.querySelectorAll('.class-level-btn').forEach(btn => {
-            btn.onclick = () => { 
-                document.querySelectorAll('.class-level-btn').forEach(b=>b.classList.remove('active-level')); 
-                btn.classList.add('active-level'); 
-                currentLevel = btn.dataset.level; 
-                renderCurrentLevelGroups(); 
+            btn.classList.toggle('active-level', btn.dataset.level === currentLevel);
+            btn.onclick = () => {
+                document.querySelectorAll('.class-level-btn').forEach(b => b.classList.remove('active-level'));
+                btn.classList.add('active-level');
+                currentLevel = btn.dataset.level;
+                saveAllData();
+                renderCurrentLevelGroups();
             };
         });
     }
