@@ -283,7 +283,23 @@
         .backup-table { width:100%; border-collapse:collapse; margin-top:12px; }
         .backup-table th,.backup-table td { padding:12px; border-bottom:1px solid #e2e8f0; text-align:right; }
         .group-title-main { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
-        .edit-group-name-btn { border:1px solid rgba(255,255,255,.5); color:#fff; background:rgba(255,255,255,.14); border-radius:24px; padding:7px 12px; cursor:pointer; font-weight:700; }
+        .edit-group-name-btn { border:1px solid rgba(255,255,255,.5); color:#fff; background:rgba(255,255,255,.14); border-radius:50%; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; padding:0; cursor:pointer; font-weight:700; }
+        .group-name-label { display:inline-flex; align-items:center; gap:8px; }
+        .group-shield-tools { display:inline-flex; align-items:center; gap:8px; margin-inline-start:8px; padding:4px 8px; border-radius:18px; background:rgba(255,255,255,.15); }
+        .group-shield-icon { width:36px; height:40px; display:block; filter:drop-shadow(0 2px 4px rgba(0,0,0,.25)); }
+        .shield-tool-btn { border:0; border-radius:50%; width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; color:#fff; font-size:20px; font-weight:900; box-shadow:0 3px 8px rgba(0,0,0,.18); }
+        .shield-fill-btn { background:#0f9d8a; }
+        .shield-empty-btn { background:#4b83c3; font-size:15px; }
+        .badge-all-btn { display:block; margin:4px auto 0; border:0; border-radius:14px; padding:4px 10px; color:#fff; background:#059669; font-size:.72rem; font-weight:800; cursor:pointer; }
+        .badge-icon-card { font-size:1.45rem; line-height:1; display:inline-block; }
+        .wheel-stage { display:flex; align-items:center; justify-content:center; gap:24px; }
+        .wheel-stage .wheel-wrapper { margin:20px 0; flex:0 0 auto; }
+        .selected-student-name { min-width:150px; max-width:220px; padding:14px 18px; border:2px solid #fbbf24; border-radius:20px; background:linear-gradient(135deg,#fff7ed,#fef3c7); color:#7c2d12; font-size:1.05rem; font-weight:900; box-shadow:0 0 0 4px rgba(251,191,36,.16),0 10px 28px rgba(124,45,18,.18); animation:studentShine 2.2s ease-in-out infinite; }
+        .selected-student-name:empty { display:none; }
+        @keyframes studentShine { 0%,100% { transform:translateY(0); box-shadow:0 0 0 3px rgba(251,191,36,.15),0 8px 20px rgba(124,45,18,.14); } 50% { transform:translateY(-3px); box-shadow:0 0 0 7px rgba(251,191,36,.24),0 12px 30px rgba(249,115,22,.32); } }
+        .badge-container { transition:transform .18s ease; }
+        .badge-container:hover { transform:translateY(-2px) scale(1.06); }
+        @media (max-width:700px) { .wheel-stage { flex-direction:column; gap:4px; } .wheel-stage .wheel-wrapper { margin:20px auto; } .selected-student-name { min-width:0; width:min(100%,320px); } .group-shield-tools { margin-top:6px; } }
         body[data-theme="dark"] { background:#071426; color:#e7eefb; }
         body[data-theme="dark"] .app-container, body[data-theme="dark"] .tabs-nav, body[data-theme="dark"] .tab-content { background:#0b1d34; color:#e7eefb; }
         body[data-theme="dark"] .tab-content h3, body[data-theme="dark"] .tab-content h2 { color:#e7eefb; }
@@ -370,11 +386,14 @@
 <div id="randomModal" class="modal">
     <div class="modal-content">
         <h3><i class="fas fa-circle-notch"></i> 🎡 دائرة الاختيار العشوائي (بدون تكرار)</h3>
-        <div class="wheel-wrapper">
-            <div class="pointer"><i class="fas fa-caret-up"></i></div>
-            <div class="wheel-canvas">
-                <canvas id="wheelCanvas" width="320" height="320"></canvas>
+        <div class="wheel-stage">
+            <div class="wheel-wrapper">
+                <div class="pointer"><i class="fas fa-caret-up"></i></div>
+                <div class="wheel-canvas">
+                    <canvas id="wheelCanvas" width="320" height="320"></canvas>
+                </div>
             </div>
+            <div id="randomSelectedStudent" class="selected-student-name" aria-live="polite"></div>
         </div>
         <button id="spinWheelBtn" style="background: #f97316; margin-top: 15px;"><i class="fas fa-play"></i> تدوير (3 ثوانٍ)</button>
         <div id="randomResult" class="selected-group-result" style="margin-top: 15px;">✨ اضغط تدوير لاختيار مجموعة ✨</div>
@@ -544,7 +563,7 @@
 
     // ========== دوال مساعدة ==========
     function getActiveWeeks() { return weeks.filter(w => w.active).map(w => ({ weekNumber: w.weekNumber, hijriText: w.hijriText })); }
-    function getTotalBulkScoreForGroup(group) { let total = 0; if(group.bulkScores) for(let w in group.bulkScores) total += Number(group.bulkScores[w]) || 0; return total; }
+    function getTotalBulkScoreForGroup(group) { let total = 0; if(group.bulkScores) for(let w in group.bulkScores) total += Number(group.bulkScores[w]) || 0; return total + (Number(group.shieldPoints) || 0); }
     function getGroupRankIcon(groupId, allScores) {
         let sorted = [...allScores].sort((a,b)=>b.score - a.score);
         let rank = sorted.findIndex(s => s.id === groupId) + 1;
@@ -588,14 +607,15 @@
         let weeksList = getActiveWeeks();
         let weekData = weeksList.find(w => w.weekNumber === selectedWeek);
         if(!weekData) return `<div class='note'>اختر أسبوعاً من الأيقونات</div>`;
-        let thead = `<tr><th>الطالب</th><th>الصفة</th><th>الشارة</th><th>الدرجة (${escapeHtml(weekData.hijriText)})</th><th>نقل</th><th>حذف</th></tr>`;
+        let thead = `<tr><th>الطالب</th><th>الصفة</th><th>الشارة<button type="button" class="badge-all-btn" data-group="${groupId}" title="منح الشارة الخضراء لجميع طلاب المجموعة">الجميع</button></th><th>الدرجة (${escapeHtml(weekData.hijriText)})</th><th>نقل</th><th>حذف</th></tr>`;
         let tbody = "";
         group.students.forEach(s => {
             let gradeVal = (s.grades && s.grades[selectedWeek] !== undefined) ? s.grades[selectedWeek] : '';
             let badgesHtml = `<div class="badge-wrapper">
                 <div class="badge-container" data-badge-type="متميز" data-student="${s.id}"><i class="fas fa-star badge-icon" style="color:#fbbf24;"></i><div class="badge-checkbox ${s.badge === 'متميز' ? 'selected' : ''}">${s.badge === 'متميز' ? '<i class="fas fa-check"></i>' : ''}</div></div>
                 <div class="badge-container" data-badge-type="متعاون" data-student="${s.id}"><i class="fas fa-handshake badge-icon" style="color:#10b981;"></i><div class="badge-checkbox ${s.badge === 'متعاون' ? 'selected' : ''}">${s.badge === 'متعاون' ? '<i class="fas fa-check"></i>' : ''}</div></div>
-                <div class="badge-container" data-badge-type="غير متعاون" data-student="${s.id}"><i class="fas fa-times-circle badge-icon" style="color:#ef4444;"></i><div class="badge-checkbox ${s.badge === 'غير متعاون' ? 'selected' : ''}">${s.badge === 'غير متعاون' ? '<i class="fas fa-check"></i>' : ''}</div></div>
+                <div class="badge-container" data-badge-type="بطاقة صفراء" data-student="${s.id}" title="بطاقة صفراء"><span class="badge-icon-card" aria-hidden="true">🟨</span><div class="badge-checkbox ${s.badge === 'بطاقة صفراء' ? 'selected' : ''}">${s.badge === 'بطاقة صفراء' ? '<i class="fas fa-check"></i>' : ''}</div></div>
+                <div class="badge-container" data-badge-type="بطاقة حمراء" data-student="${s.id}" title="بطاقة حمراء"><span class="badge-icon-card" aria-hidden="true">🟥</span><div class="badge-checkbox ${s.badge === 'بطاقة حمراء' ? 'selected' : ''}">${s.badge === 'بطاقة حمراء' ? '<i class="fas fa-check"></i>' : ''}</div></div>
             </div>`;
             tbody += `<tr data-student-id="${s.id}"><td>${escapeHtml(s.name)}</td>
                         <td><select class="student-role" data-student="${s.id}">${['قائد','نائب قائد','كاتب','مساعد كاتب','مسؤول المواد','متحدث','ضابط الوقت'].map(opt => `<option ${s.role===opt ? 'selected':''}>${opt}</option>`).join('')}</select></td>
@@ -629,7 +649,9 @@
             let selectedWeek = currentWeekView[g.id];
             let totalBulkScore = getTotalBulkScoreForGroup(g);
             let rankIcon = getGroupRankIcon(g.id, allScores);
-            groupsHtml += `<div class="group-card"><div class="group-title"><div class="group-title-main"><span><i class="fas fa-layer-group"></i> ${rankIcon} ${escapeHtml(g.name)}</span><button class="edit-group-name-btn" type="button" data-group="${g.id}" title="تعديل اسم المجموعة"><i class="fas fa-pen"></i> تعديل الاسم</button></div><div class="group-stats"><span>📊 مجموع الإضافات: ${totalBulkScore} درجة</span><button class="delete-group-btn" data-group="${g.id}"><i class="fas fa-trash-alt"></i> حذف</button></div></div><div style="padding:16px; overflow-x:auto;">${renderGroupTableForWeek(g, g.id, selectedWeek)}</div><div class="week-icons-container">${activeWeeks.map(week => `<div class="week-icon ${selectedWeek === week.weekNumber ? 'active-week' : ''}" data-group="${g.id}" data-week="${week.weekNumber}">${week.weekNumber}</div>`).join('')}</div><div class="add-student-bar"><input type="text" class="new-student-name" data-group="${g.id}" placeholder="اسم الطالب"><select class="new-student-role" data-group="${g.id}"><option>قائد</option><option>نائب قائد</option><option>كاتب</option><option>مساعد كاتب</option><option>مسؤول المواد</option><option>متحدث</option><option>ضابط الوقت</option></select><button class="add-student-to-group" data-group="${g.id}">➕ إضافة طالب</button></div></div>`;
+            let shieldProgress = Math.max(0, Math.min(3, Number(g.shieldQuarter) || 0));
+            let shieldHeight = shieldProgress * 18;
+            groupsHtml += `<div class="group-card"><div class="group-title"><div class="group-title-main"><span class="group-name-label">${rankIcon} ${escapeHtml(g.name)}</span><button class="edit-group-name-btn" type="button" data-group="${g.id}" title="تعديل اسم المجموعة" aria-label="تعديل اسم المجموعة"><i class="fas fa-pen"></i></button><div class="group-shield-tools" aria-label="درع نقاط المجموعة"><svg class="group-shield-icon" viewBox="0 0 64 72" role="img" aria-label="الدرع ممتلئ بنسبة ${shieldProgress * 25}%"><defs><clipPath id="shieldClip_${g.id}"><path d="M32 3 58 13v20c0 17-11 29-26 36C17 62 6 50 6 33V13L32 3Z"/></clipPath></defs><path d="M32 3 58 13v20c0 17-11 29-26 36C17 62 6 50 6 33V13L32 3Z" fill="#e2e8f0" stroke="#38bdf8" stroke-width="4"/><rect x="4" y="${69 - shieldHeight}" width="56" height="${shieldHeight}" fill="#14b8a6" clip-path="url(#shieldClip_${g.id})"/><path d="M32 3 58 13v20c0 17-11 29-26 36C17 62 6 50 6 33V13L32 3Z" fill="none" stroke="#38bdf8" stroke-width="4"/></svg><button type="button" class="shield-tool-btn shield-fill-btn" data-group="${g.id}" title="املأ ربع الدرع" aria-label="إضافة ربع إلى الدرع">+</button><button type="button" class="shield-tool-btn shield-empty-btn" data-group="${g.id}" title="تفريغ الدرع" aria-label="تفريغ الدرع"><i class="fas fa-rotate-left"></i></button></div></div><div class="group-stats"><span>📊 مجموع النقاط: ${totalBulkScore} درجة</span><button class="delete-group-btn" data-group="${g.id}"><i class="fas fa-trash-alt"></i> حذف</button></div></div><div style="padding:16px; overflow-x:auto;">${renderGroupTableForWeek(g, g.id, selectedWeek)}</div><div class="week-icons-container">${activeWeeks.map(week => `<div class="week-icon ${selectedWeek === week.weekNumber ? 'active-week' : ''}" data-group="${g.id}" data-week="${week.weekNumber}">${week.weekNumber}</div>`).join('')}</div><div class="add-student-bar"><input type="text" class="new-student-name" data-group="${g.id}" placeholder="اسم الطالب"><select class="new-student-role" data-group="${g.id}"><option>قائد</option><option>نائب قائد</option><option>كاتب</option><option>مساعد كاتب</option><option>مسؤول المواد</option><option>متحدث</option><option>ضابط الوقت</option></select><button class="add-student-to-group" data-group="${g.id}">➕ إضافة طالب</button></div></div>`;
         });
         groupsHtml += `</div>`;
         container.innerHTML = groupsHtml;
@@ -649,6 +671,7 @@
     }
     
     function attachBadgeEvents() { 
+        document.querySelectorAll('.badge-all-btn').forEach(btn => btn.onclick = handleGiveHandshakeToAll);
         document.querySelectorAll('.badge-container').forEach(cont => {
             cont.onclick = (e) => { 
                 e.stopPropagation(); 
@@ -659,6 +682,16 @@
         });
     }
     
+    function handleGiveHandshakeToAll(e) {
+        const groupId = parseInt(e.currentTarget.dataset.group, 10);
+        const group = (classesData[currentLevel]?.groups || []).find(g => g.id === groupId);
+        if(!group) return;
+        group.students.forEach(student => { student.badge = "متعاون"; });
+        saveAllData();
+        renderCurrentLevelGroups();
+        renderResultsTab();
+    }
+
     function findGroupAndStudent(studentId) { 
         for(let l in classesData) for(let g of classesData[l].groups) { 
             let s = g.students.find(s => s.id === studentId); 
@@ -831,10 +864,42 @@
         document.querySelectorAll('.bulk-adjust-btn').forEach(btn => btn.onclick = handleBulkAdjust); 
         document.querySelectorAll('.add-student-to-group').forEach(btn => btn.onclick = handleAddStudent); 
         document.querySelectorAll('.delete-group-btn').forEach(btn => btn.onclick = handleDeleteGroup);
-        document.querySelectorAll('.edit-group-name-btn').forEach(btn => btn.onclick = handleRenameGroup); 
+        document.querySelectorAll('.edit-group-name-btn').forEach(btn => btn.onclick = handleRenameGroup);
+        document.querySelectorAll('.shield-fill-btn').forEach(btn => btn.onclick = handleShieldFill);
+        document.querySelectorAll('.shield-empty-btn').forEach(btn => btn.onclick = handleShieldEmpty); 
         document.querySelectorAll('.transfer-student-btn').forEach(btn => btn.onclick = (e) => { let sid = parseInt(e.target.closest('button').dataset.student); showTransferModal(sid); }); 
     }
     
+    function findGroupById(groupId) {
+        for(const level in classesData) {
+            const group = (classesData[level].groups || []).find(g => g.id === groupId);
+            if(group) return group;
+        }
+        return null;
+    }
+
+    function handleShieldFill(e) {
+        const group = findGroupById(parseInt(e.currentTarget.dataset.group, 10));
+        if(!group) return;
+        group.shieldQuarter = Number(group.shieldQuarter) || 0;
+        group.shieldQuarter += 1;
+        if(group.shieldQuarter >= 4) {
+            group.shieldQuarter = 0;
+            group.shieldPoints = (Number(group.shieldPoints) || 0) + 1;
+        }
+        saveAllData();
+        renderCurrentLevelGroups();
+        renderResultsTab();
+    }
+
+    function handleShieldEmpty(e) {
+        const group = findGroupById(parseInt(e.currentTarget.dataset.group, 10));
+        if(!group) return;
+        group.shieldQuarter = 0;
+        saveAllData();
+        renderCurrentLevelGroups();
+    }
+
     function handleRenameGroup(e) {
         const id = parseInt(e.currentTarget.dataset.group, 10);
         const group = (classesData[currentLevel]?.groups || []).find(g => g.id === id);
@@ -867,7 +932,7 @@
     
     function renderResultsTab() { 
         let container = document.getElementById("resultsContainer"); 
-        let res = computeGroupsTotalBulkScores(); 
+        let res = computeGroupsTotalBulkScores().sort((a,b) => b.totalScore - a.totalScore); 
         if(!res.length) { container.innerHTML = "<div class='note'>لا توجد مجموعات بعد.</div>"; return; } 
         container.innerHTML = res.map(r => `<div class="result-card"><div><strong>📌 ${escapeHtml(r.groupDisplay)}</strong></div><div>🏆 مجموع الإضافات: ${r.totalScore}</div></div>`).join(''); 
     }
@@ -926,6 +991,7 @@
     function startWheelSpin() {
         if(currentAvailableGroups.length === 0) {
             document.getElementById("randomResult").innerHTML = "⚠️ لا توجد مجموعات متاحة! اضغط 'إعادة ضبط القائمة'.";
+            document.getElementById("randomSelectedStudent").textContent = "";
             return;
         }
         wheelGroups = [...currentAvailableGroups];
@@ -942,6 +1008,14 @@
             let segmentSize = (Math.PI * 2) / wheelGroups.length;
             let winningIndex = Math.floor(((Math.PI * 2) - angle) / segmentSize) % wheelGroups.length;
             let winner = wheelGroups[winningIndex];
+            const winnerGroup = (classesData[winner.level]?.groups || []).find(g => g.id === winner.id);
+            const studentDisplay = document.getElementById("randomSelectedStudent");
+            if(winnerGroup && winnerGroup.students.length) {
+                const selectedStudent = winnerGroup.students[Math.floor(Math.random() * winnerGroup.students.length)];
+                studentDisplay.innerHTML = `✨ الطالب المختار <strong>${escapeHtml(selectedStudent.name)}</strong> ✨`;
+            } else {
+                studentDisplay.textContent = "لا يوجد طلاب في هذه المجموعة";
+            }
             let winnerIndexInAvailable = currentAvailableGroups.findIndex(g => g.id === winner.id);
             if(winnerIndexInAvailable !== -1) {
                 currentAvailableGroups.splice(winnerIndexInAvailable, 1);
@@ -956,6 +1030,7 @@
     function resetWheel() {
         updateAvailableGroups();
         document.getElementById("randomResult").innerHTML = `✨ تم إعادة ضبط القائمة (${currentAvailableGroups.length} مجموعة متاحة) ✨`;
+        document.getElementById("randomSelectedStudent").textContent = "";
         drawWheel(wheelGroups);
     }
     
@@ -964,6 +1039,7 @@
         if(currentAvailableGroups.length === 0) { alert("لا توجد مجموعات في هذا الفصل"); return; }
         document.getElementById("randomModal").style.display = "flex";
         document.getElementById("randomResult").innerHTML = `✨ اضغط تدوير لبدء الاختيار (${currentAvailableGroups.length} مجموعة متاحة) ✨`;
+        document.getElementById("randomSelectedStudent").textContent = "";
         document.getElementById("spinWheelBtn").onclick = () => startWheelSpin();
         document.getElementById("resetWheelBtn").onclick = () => resetWheel();
     }
